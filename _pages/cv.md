@@ -17,6 +17,12 @@ Education
 
 Work experience
 ======
+
+* 2+1 Dimensional Stochastic Relativistic Viscous Hydrodynamics from the Metropolis algorithm (*Sept. 2024 – Present*)
+  * Supervisor: Prof. Derek Teaney (Stony Brook University)
+  * Research Focus: Numerical simulations of relativistic hydrodynamics and their applications in high-energy
+    nuclear physics.
+
 * Spring 2024: Academic Pages Collaborator
   * GitHub University
   * Duties includes: Updates and improvements to template
