@@ -17,13 +17,17 @@ Education
 
 Work experience
 ======
+* Fixed-Target Acceptance Studies for the ePIC Detector at the EIC (*Sept. 2025 – Present*)
+  * Supervisor: Prof. Helen Caines \& Prof. Laura Havener (Yale University)
+  * Research Focus: Conducted DD4hep/Geant4-based full detector simulations for the ePIC experiment in the fixed-target (FXT) configuration, focusing on acceptance and performance studies relevant to low-energy QCD and baryon-rich matter.
+
 
 * 2+1 Dimensional Stochastic Relativistic Viscous Hydrodynamics from the Metropolis algorithm (*Sept. 2024 – Present*)
   * Supervisor: Prof. Derek Teaney (Stony Brook University)
   * Research Focus: Numerical simulations of relativistic hydrodynamics and their applications in high-energy
     nuclear physics.
 
-* Spring 2024: Academic Pages Collaborator
+<!-- * Spring 2024: Academic Pages Collaborator
   * GitHub University
   * Duties includes: Updates and improvements to template
   * Supervisor: The Users
@@ -36,18 +40,18 @@ Work experience
 * Summer 2015: Research Assistant
   * GitHub University
   * Duties included: Tagging issues
-  * Supervisor: Professor Git
+  * Supervisor: Professor Git -->
   
-Skills
+<!-- Skills
 ======
 * Skill 1
 * Skill 2
   * Sub-skill 2.1
   * Sub-skill 2.2
   * Sub-skill 2.3
-* Skill 3
+* Skill 3 -->
 
-Publications
+<!-- Publications
 ======
   <ul>{% for post in site.publications reversed %}
     {% include archive-single-cv.html %}
@@ -64,7 +68,7 @@ Teaching
   <ul>{% for post in site.teaching reversed %}
     {% include archive-single-cv.html %}
   {% endfor %}</ul>
-  
+   -->
 Service and leadership
 ======
 * Currently signed in to 43 different slack teams
