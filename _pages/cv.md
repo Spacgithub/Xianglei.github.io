@@ -18,7 +18,7 @@ Education
 Work experience
 ======
 * Fixed-Target Acceptance Studies for the ePIC Detector at the EIC (*Sept. 2025 – Present*)
-  * Supervisor: Prof. Helen Caines \& Prof. Laura Havener (Yale University)
+  * Supervisor: Prof. Helen Caines & Prof. Laura Havener (Yale University)
   * Research Focus: Conducted DD4hep/Geant4-based full detector simulations for the ePIC experiment in the fixed-target (FXT) configuration, focusing on acceptance and performance studies relevant to low-energy QCD and baryon-rich matter.
 
 
