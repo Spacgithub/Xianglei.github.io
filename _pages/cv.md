@@ -27,6 +27,10 @@ Work experience
   * Research Focus: Numerical simulations of relativistic hydrodynamics and their applications in high-energy
     nuclear physics.
 
+* The Stochastic Relativistic Advection Diffusion Equation From the Metropolis Algorithm (*May 2024 – Aug. 2024*)
+  * Supervisor: Prof. Derek Teaney (Stony Brook University)
+  * Research Focus: Developing and utilizing advanced numerical techniques, such as the Metropolis algorithm, to simulate advection-diffusion dynamics and thermal noise in relativistic systems.
+
 <!-- * Spring 2024: Academic Pages Collaborator
   * GitHub University
   * Duties includes: Updates and improvements to template
