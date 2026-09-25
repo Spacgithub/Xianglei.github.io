@@ -62,7 +62,7 @@
       <li class="cv-item">
         <div class="cv-item-header">
           <div class="cv-item-title">{{ education.area }}</div>
-          <div class="cv-item-date">{{ education.endDate }}</div>
+          <div class="cv-item-date">{% if education.startDate %}{{ education.startDate }}{% if education.endDate %} – {% endif %}{% endif %}{{ education.endDate }}</div>
         </div>
         <div class="cv-item-content">
           <div class="cv-item-subtitle">{{ education.institution }}</div>
@@ -82,9 +82,9 @@
   {% endif %}
   
   {% if cv.work.size > 0 %}
-  <!-- Work Experience -->
+  <!-- Research Experience -->
   <div class="cv-section">
-    <h2>Work Experience</h2>
+    <h2>Research Experience</h2>
     <ul class="cv-list">
       {% for work in cv.work %}
       <li class="cv-item">

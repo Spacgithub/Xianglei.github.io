@@ -11,11 +11,11 @@ redirect_from:
 
 Education
 ======
-<!-- * Ph.D in Version Control Theory, GitHub University, 2018 (expected) -->
-* M.S. in Applied Physics, Yale University, 2026 (Expected)
+* Ph.D. in Physics, William & Mary, Fall 2026 – Present
+* M.S. in Applied Physics, Yale University, 2026
 * B.S. in Physics (Honors) & Mathematics, Stony Brook University, 2025
 
-Work experience
+Research experience
 ======
 * Fixed-Target Acceptance Studies for the ePIC Detector at the EIC (*Sept. 2025 – Present*)
   * Supervisor: Prof. Helen Caines & Prof. Laura Havener (Yale University)
@@ -30,49 +30,3 @@ Work experience
 * The Stochastic Relativistic Advection Diffusion Equation From the Metropolis Algorithm (*May 2024 – Aug. 2024*)
   * Supervisor: Prof. Derek Teaney (Stony Brook University)
   * Research Focus: Developing and utilizing advanced numerical techniques, such as the Metropolis algorithm, to simulate advection-diffusion dynamics and thermal noise in relativistic systems.
-
-<!-- * Spring 2024: Academic Pages Collaborator
-  * GitHub University
-  * Duties includes: Updates and improvements to template
-  * Supervisor: The Users
-
-* Fall 2015: Research Assistant
-  * GitHub University
-  * Duties included: Merging pull requests
-  * Supervisor: Professor Hub
-
-* Summer 2015: Research Assistant
-  * GitHub University
-  * Duties included: Tagging issues
-  * Supervisor: Professor Git -->
-  
-<!-- Skills
-======
-* Skill 1
-* Skill 2
-  * Sub-skill 2.1
-  * Sub-skill 2.2
-  * Sub-skill 2.3
-* Skill 3 -->
-
-<!-- Publications
-======
-  <ul>{% for post in site.publications reversed %}
-    {% include archive-single-cv.html %}
-  {% endfor %}</ul>
-  
-Talks
-======
-  <ul>{% for post in site.talks reversed %}
-    {% include archive-single-talk-cv.html  %}
-  {% endfor %}</ul>
-  
-Teaching
-======
-  <ul>{% for post in site.teaching reversed %}
-    {% include archive-single-cv.html %}
-  {% endfor %}</ul>
-   -->
-<!-- Service and leadership
-======
-* Currently signed in to 43 different slack teams -->

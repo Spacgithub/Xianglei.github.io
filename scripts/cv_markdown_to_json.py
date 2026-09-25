@@ -4,14 +4,12 @@ Script to convert markdown CV to JSON format
 Author: Yuan Chen
 """
 
-import os
 import re
 import json
 import yaml
 import argparse
 from datetime import datetime, date
 from pathlib import Path
-import glob
 
 # Custom JSON encoder to handle date objects
 class DateTimeEncoder(json.JSONEncoder):
@@ -22,45 +20,48 @@ class DateTimeEncoder(json.JSONEncoder):
 
 def parse_markdown_cv(md_file):
     """Parse the markdown CV file and extract sections."""
-    with open(md_file, 'r', encoding='utf-8') as file:
-        content = file.read()
-    
-    # Remove YAML front matter
-    content = re.sub(r'^---.*?---\s*', '', content, flags=re.DOTALL)
-    
-    # Extract sections
+    content = Path(md_file).read_text(encoding='utf-8')
+    content = re.sub(r'\A---\s*\n.*?\n---\s*\n', '', content, count=1, flags=re.DOTALL)
+
+    # Accept both the setext headings used by cv.md and Markdown # headings.
     sections = {}
     current_section = None
     section_content = []
-    
-    for line in content.split('\n'):
-        if re.match(r'^=+$', line):
-            continue
-        
-        section_match = re.match(r'^([A-Za-z\s]+)$', line.strip())
-        if section_match and len(line.strip()) > 0:
+    lines = content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        heading = re.match(r'^#{1,2}\s+(.+?)\s*#*$', line)
+        if heading:
+            section_name = heading.group(1)
+        elif index + 1 < len(lines) and re.fullmatch(r'\s*=+\s*', lines[index + 1]):
+            section_name = line.strip()
+            index += 1
+        else:
+            section_name = None
+
+        if section_name:
             if current_section:
                 sections[current_section] = '\n'.join(section_content).strip()
-                section_content = []
-            current_section = section_match.group(1).strip()
+            current_section = section_name
+            section_content = []
         elif current_section:
             section_content.append(line)
-    
-    # Add the last section
-    if current_section and section_content:
+        index += 1
+
+    if current_section:
         sections[current_section] = '\n'.join(section_content).strip()
-    
     return sections
 
 def parse_config(config_file):
     """Parse the Jekyll _config.yml file for additional information."""
-    if not os.path.exists(config_file):
+    if not config_file or not Path(config_file).exists():
         return {}
     
     with open(config_file, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
     
-    return config
+    return config or {}
 
 def extract_author_info(config):
     """Extract author information from the config file."""
@@ -68,13 +69,14 @@ def extract_author_info(config):
         "name": config.get('name', ''),
         "email": "",
         "phone": "",
-        "website": config.get('url', ''),
+        "website": (str(config.get('url') or '').rstrip('/') + '/' +
+                    str(config.get('baseurl') or '').strip('/')).rstrip('/'),
         "summary": "",
         "location": {
             "address": "",
             "postalCode": "",
             "city": "",
-            "countryCode": "US",
+            "countryCode": "",
             "region": ""
         },
         "profiles": []
@@ -91,21 +93,21 @@ def extract_author_info(config):
         # Add email
         if author.get('email'):
             author_info['email'] = author.get('email')
+
+        if author.get('phone'):
+            author_info['phone'] = author.get('phone')
         
         # Add location
         if author.get('location'):
-            author_info['location']['city'] = author.get('location', '')
-        
-        # Add employer as part of summary
-        if author.get('employer'):
-            author_info['summary'] = f"Currently employed at {author.get('employer')}"
-        
-        # Add bio to summary if available
+            location = str(author['location'])
+            city, separator, region = location.partition(',')
+            author_info['location']['city'] = city.strip()
+            if separator:
+                author_info['location']['region'] = region.strip()
+
+        # A student affiliation does not establish an employment relationship.
         if author.get('bio'):
-            if author_info['summary']:
-                author_info['summary'] += f". {author.get('bio')}"
-            else:
-                author_info['summary'] = author.get('bio')
+            author_info['summary'] = author.get('bio')
         
         # Add social profiles
         profiles = []
@@ -158,75 +160,93 @@ def extract_author_info(config):
     
     return author_info
 
-def parse_education(education_text):
-    """Parse education section from markdown."""
-    education_entries = []
-    
-    # Extract education entries
-    entries = re.findall(r'\* (.*?)(?=\n\*|\Z)', education_text, re.DOTALL)
-    
-    for entry in entries:
-        # Parse degree, institution, and year
-        match = re.match(r'([^,]+), ([^,]+), (\d{4})(.*)', entry.strip())
+def top_level_bullets(text):
+    """Group each unindented bullet with its indented detail and continuation lines."""
+    entries = []
+    for line in text.splitlines():
+        match = re.match(r'^[*-]\s+(.+)$', line)
         if match:
-            degree, institution, year, additional = match.groups()
-            
-            # Extract GPA if available
-            gpa_match = re.search(r'GPA: ([\d\.]+)', additional)
-            gpa = gpa_match.group(1) if gpa_match else None
-            
-            education_entries.append({
-                "institution": institution.strip(),
-                "area": degree.strip(),
-                "studyType": "",
-                "startDate": "",
-                "endDate": year.strip(),
-                "gpa": gpa,
-                "courses": []
-            })
-    
+            entries.append([match.group(1).strip()])
+        elif entries and line.strip():
+            entries[-1].append(line)
+    return entries
+
+
+def split_date_range(value):
+    """Keep the CV's original date precision and expected/present qualifiers."""
+    parts = re.split(r'\s+[–—-]\s+', value.strip(' *'), maxsplit=1)
+    if len(parts) == 1:
+        parts = re.split(r'(?<=\d{4})\s*[–—-]\s*(?=\d{4}|present\b)',
+                         value.strip(' *'), maxsplit=1, flags=re.IGNORECASE)
+    return (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else ('', parts[0].strip())
+
+
+def parse_education(education_text):
+    """Parse degree, institution, and dated entries without discarding qualifiers."""
+    education_entries = []
+    for entry in top_level_bullets(education_text):
+        parts = [part.strip() for part in entry[0].split(',', 2)]
+        if len(parts) != 3:
+            continue
+        degree, institution, dates = parts
+        gpa_match = re.search(r'\bGPA:\s*([\d.]+)', '\n'.join(entry))
+        dates = re.sub(r'\s*\bGPA:\s*[\d.]+', '', dates).strip()
+        start_date, end_date = split_date_range(dates)
+        education_entries.append({
+            "institution": institution,
+            "area": degree,
+            "studyType": "",
+            "startDate": start_date,
+            "endDate": end_date,
+            "gpa": gpa_match.group(1) if gpa_match else None,
+            "courses": []
+        })
     return education_entries
 
-def parse_work_experience(work_text):
-    """Parse work experience section from markdown."""
+
+def parse_work_experience(work_text, research=False):
+    """Parse either project-based research or the original position/company format."""
     work_entries = []
-    
-    # Extract work entries
-    entries = re.findall(r'\* (.*?)(?=\n\*|\Z)', work_text, re.DOTALL)
-    
-    for entry in entries:
-        lines = entry.strip().split('\n')
-        if not lines:
-            continue
-            
-        # Parse position and company
-        first_line = lines[0].strip()
-        position_match = re.match(r'(.*?), (.*?)(?:, |$)', first_line)
-        
-        if position_match:
-            position, company = position_match.groups()
-            
-            # Extract dates if available
-            date_match = re.search(r'(\d{4})\s*-\s*(\d{4}|present)', entry, re.IGNORECASE)
-            start_date = date_match.group(1) if date_match else ""
-            end_date = date_match.group(2) if date_match else ""
-            
-            # Extract highlights
-            highlights = []
-            for line in lines[1:]:
-                if line.strip().startswith('*') or line.strip().startswith('-'):
-                    highlights.append(line.strip()[1:].strip())
-            
-            work_entries.append({
-                "company": company.strip(),
-                "position": position.strip(),
-                "website": "",
-                "startDate": start_date,
-                "endDate": end_date,
-                "summary": "",
-                "highlights": highlights
-            })
-    
+    for entry in top_level_bullets(work_text):
+        heading = entry[0]
+        # Research headings end in (*Month Year – Present*); old entries can
+        # instead give position, company, and an unparenthesized year range.
+        date_match = re.search(r'\s+\(\*?([^()]*\d{4}\s+[–—-]\s+[^()]*)\*?\)\s*$', heading)
+        if date_match:
+            heading = heading[:date_match.start()].strip()
+            start_date, end_date = split_date_range(date_match.group(1))
+        else:
+            year_match = re.search(r'\b(\d{4}\s*[–—-]\s*(?:\d{4}|present))\b', heading, re.IGNORECASE)
+            start_date, end_date = split_date_range(year_match.group(1)) if year_match else ('', '')
+            if year_match:
+                heading = heading[:year_match.start()].rstrip(' ,')
+
+        details = []
+        for line in entry[1:]:
+            detail = re.match(r'^\s+[*-]\s+(.+)$', line)
+            if detail:
+                details.append(detail.group(1).strip())
+            elif details and line.strip():
+                details[-1] += ' ' + line.strip()
+
+        supervisor = next((item for item in details if item.lower().startswith('supervisor:')), '')
+        focus = next((item for item in details if item.lower().startswith('research focus:')), '')
+        institution_match = re.search(r'\(([^()]*)\)\s*$', supervisor)
+        company = institution_match.group(1).strip() if institution_match else ''
+        if not research and ',' in heading:
+            position, company = [part.strip() for part in heading.split(',', 1)]
+        else:
+            position = heading
+
+        work_entries.append({
+            "company": company,
+            "position": position,
+            "website": "",
+            "startDate": start_date,
+            "endDate": end_date,
+            "summary": focus.partition(':')[2].strip() if focus else "",
+            "highlights": [item for item in details if item != focus]
+        })
     return work_entries
 
 def parse_skills(skills_text):
@@ -248,120 +268,70 @@ def parse_skills(skills_text):
     
     return skills_entries
 
+def collection_front_matter(directory):
+    """Yield visible collection metadata; hidden template examples stay hidden."""
+    if not Path(directory).exists():
+        return
+    for item in sorted(Path(directory).glob('*.md')):
+        content = item.read_text(encoding='utf-8')
+        match = re.match(r'\A---\s*\n(.*?)\n---(?:\s*\n|\Z)', content, re.DOTALL)
+        if not match:
+            continue
+        metadata = yaml.safe_load(match.group(1)) or {}
+        if not isinstance(metadata, dict) or metadata.get('published') is False:
+            continue
+        yield metadata
+
 def parse_publications(pub_dir):
     """Parse publications from the _publications directory."""
     publications = []
-    
-    if not os.path.exists(pub_dir):
-        return publications
-    
-    for pub_file in sorted(glob.glob(os.path.join(pub_dir, "*.md"))):
-        with open(pub_file, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # Extract front matter
-        front_matter_match = re.match(r'^---\s*(.*?)\s*---', content, re.DOTALL)
-        if front_matter_match:
-            front_matter = yaml.safe_load(front_matter_match.group(1))
-            
-            # Extract publication details
-            pub_entry = {
-                "name": front_matter.get('title', ''),
-                "publisher": front_matter.get('venue', ''),
-                "releaseDate": front_matter.get('date', ''),
-                "website": front_matter.get('paperurl', ''),
-                "summary": front_matter.get('excerpt', '')
-            }
-            
-            publications.append(pub_entry)
-    
+    for front_matter in collection_front_matter(pub_dir):
+        publications.append({
+            "name": front_matter.get('title', ''),
+            "publisher": front_matter.get('venue', ''),
+            "releaseDate": front_matter.get('date', ''),
+            "website": front_matter.get('paperurl', ''),
+            "summary": front_matter.get('excerpt', '')
+        })
     return publications
 
 def parse_talks(talks_dir):
     """Parse talks from the _talks directory."""
     talks = []
-    
-    if not os.path.exists(talks_dir):
-        return talks
-    
-    for talk_file in sorted(glob.glob(os.path.join(talks_dir, "*.md"))):
-        with open(talk_file, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # Extract front matter
-        front_matter_match = re.match(r'^---\s*(.*?)\s*---', content, re.DOTALL)
-        if front_matter_match:
-            front_matter = yaml.safe_load(front_matter_match.group(1))
-            
-            # Extract talk details
-            talk_entry = {
-                "name": front_matter.get('title', ''),
-                "event": front_matter.get('venue', ''),
-                "date": front_matter.get('date', ''),
-                "location": front_matter.get('location', ''),
-                "description": front_matter.get('excerpt', '')
-            }
-            
-            talks.append(talk_entry)
-    
+    for front_matter in collection_front_matter(talks_dir):
+        talks.append({
+            "name": front_matter.get('title', ''),
+            "event": front_matter.get('venue', ''),
+            "date": front_matter.get('date', ''),
+            "location": front_matter.get('location', ''),
+            "description": front_matter.get('excerpt', '')
+        })
     return talks
 
 def parse_teaching(teaching_dir):
     """Parse teaching from the _teaching directory."""
     teaching = []
-    
-    if not os.path.exists(teaching_dir):
-        return teaching
-    
-    for teaching_file in sorted(glob.glob(os.path.join(teaching_dir, "*.md"))):
-        with open(teaching_file, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # Extract front matter
-        front_matter_match = re.match(r'^---\s*(.*?)\s*---', content, re.DOTALL)
-        if front_matter_match:
-            front_matter = yaml.safe_load(front_matter_match.group(1))
-            
-            # Extract teaching details
-            teaching_entry = {
-                "course": front_matter.get('title', ''),
-                "institution": front_matter.get('venue', ''),
-                "date": front_matter.get('date', ''),
-                "role": front_matter.get('type', ''),
-                "description": front_matter.get('excerpt', '')
-            }
-            
-            teaching.append(teaching_entry)
-    
+    for front_matter in collection_front_matter(teaching_dir):
+        teaching.append({
+            "course": front_matter.get('title', ''),
+            "institution": front_matter.get('venue', ''),
+            "date": front_matter.get('date', ''),
+            "role": front_matter.get('type', ''),
+            "description": front_matter.get('excerpt', '')
+        })
     return teaching
 
 def parse_portfolio(portfolio_dir):
     """Parse portfolio items from the _portfolio directory."""
     portfolio = []
-    
-    if not os.path.exists(portfolio_dir):
-        return portfolio
-    
-    for portfolio_file in sorted(glob.glob(os.path.join(portfolio_dir, "*.md"))):
-        with open(portfolio_file, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # Extract front matter
-        front_matter_match = re.match(r'^---\s*(.*?)\s*---', content, re.DOTALL)
-        if front_matter_match:
-            front_matter = yaml.safe_load(front_matter_match.group(1))
-            
-            # Extract portfolio details
-            portfolio_entry = {
-                "name": front_matter.get('title', ''),
-                "category": front_matter.get('collection', 'portfolio'),
-                "date": front_matter.get('date', ''),
-                "url": front_matter.get('permalink', ''),
-                "description": front_matter.get('excerpt', '')
-            }
-            
-            portfolio.append(portfolio_entry)
-    
+    for front_matter in collection_front_matter(portfolio_dir):
+        portfolio.append({
+            "name": front_matter.get('title', ''),
+            "category": front_matter.get('collection', 'portfolio'),
+            "date": front_matter.get('date', ''),
+            "url": front_matter.get('permalink', ''),
+            "description": front_matter.get('excerpt', '')
+        })
     return portfolio
 
 def create_cv_json(md_file, config_file, repo_root, output_file):
@@ -378,7 +348,8 @@ def create_cv_json(md_file, config_file, repo_root, output_file):
     # Create the JSON structure
     cv_json = {
         "basics": author_info,
-        "work": parse_work_experience(sections.get('Work experience', '')),
+        "work": (parse_work_experience(sections.get('Research experience', ''), research=True) +
+                 parse_work_experience(sections.get('Work experience', ''))),
         "education": parse_education(sections.get('Education', '')),
         "skills": parse_skills(sections.get('Skills', '')),
         "languages": [],
@@ -387,16 +358,16 @@ def create_cv_json(md_file, config_file, repo_root, output_file):
     }
     
     # Add publications
-    cv_json["publications"] = parse_publications(os.path.join(repo_root, "_publications"))
+    cv_json["publications"] = parse_publications(Path(repo_root) / "_publications")
     
     # Add talks
-    cv_json["presentations"] = parse_talks(os.path.join(repo_root, "_talks"))
+    cv_json["presentations"] = parse_talks(Path(repo_root) / "_talks")
     
     # Add teaching
-    cv_json["teaching"] = parse_teaching(os.path.join(repo_root, "_teaching"))
+    cv_json["teaching"] = parse_teaching(Path(repo_root) / "_teaching")
     
     # Add portfolio
-    cv_json["portfolio"] = parse_portfolio(os.path.join(repo_root, "_portfolio"))
+    cv_json["portfolio"] = parse_portfolio(Path(repo_root) / "_portfolio")
     
     # Extract languages and interests from config if available
     if 'languages' in config:
@@ -407,7 +378,8 @@ def create_cv_json(md_file, config_file, repo_root, output_file):
     
     # Write the JSON to a file
     with open(output_file, 'w', encoding='utf-8') as file:
-        json.dump(cv_json, file, indent=2, cls=DateTimeEncoder)
+        json.dump(cv_json, file, indent=2, cls=DateTimeEncoder, ensure_ascii=False)
+        file.write('\n')
     
     print(f"Successfully converted {md_file} to {output_file}")
 

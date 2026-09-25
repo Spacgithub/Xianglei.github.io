@@ -9,10 +9,10 @@
 # Basic Site Settings
 locale                   : "en-US"
 site_theme               : "default"
-title                    : "Home"
+title                    : "Xianglei Fang"
 title_separator          : "-"
 name                     : &name "Xianglei Fang"
-description              : &description "personal description"
+description              : &description "Research in computational nuclear physics, relativistic hydrodynamics, and detector simulation."
 url                      : "https://spacgithub.github.io" # the base hostname & protocol for your site e.g. "https://[your GitHub username].github.io" or if you already have some other page hosted on Github then use "https://[your GitHub username].github.io/[Your Repo Name]"
 baseurl                  : "/Xianglei.github.io" # the subpath of your site, e.g. "/blog"
 repository               : "Spacgithub/Xianglei.github.io"
@@ -25,11 +25,11 @@ author:
   avatar           : "profile.png"
   name             : "Xianglei Fang"
   pronouns         : # example: "she/her"  
-  # bio              : "Short biography for the left-hand sidebar"
-  location         : "New Haven, CT"
-  employer         : "Yale University"
+  bio              : "Physics Ph.D. student at William & Mary"
+  location         : "Williamsburg, VA"
+  employer         : "William & Mary"
   uri              : # URL
-  email            : "Xianglei.Fang@yale.edu" 
+  email            : "xfang04@wm.edu"
 
   # Academic websites
   # academia         : # URL
@@ -46,7 +46,7 @@ author:
   bitbucket        : # Username - Update with your username on the site
   codepen          : # Username
   dribbble         : # Username
-  # github           : "academicpages"
+  github           : "Spacgithub"
   kaggle           : # Username  
   stackoverflow    : # User number or user number and name (i.e., use "1" or "1/jeff-atwood")    
 
@@ -143,7 +143,8 @@ og_image                 :  # Open Graph/Twitter default site image
 social:
   type                   : # Person or Organization (defaults to Person)
   name                   : # If the user or organization name differs from the site's name
-  links: # An array of links to social media profiles
+  links:
+    - "https://github.com/Spacgithub"
 
 
 # Analytics
