@@ -1,7 +1,7 @@
 {
   "basics": {
     "name": "Xianglei Fang",
-    "email": "xfang04@wm.edu",
+    "email": "",
     "phone": "",
     "website": "https://spacgithub.github.io/Xianglei.github.io",
     "summary": "Physics Ph.D. student at William & Mary",
@@ -70,7 +70,7 @@
       "area": "M.S. in Applied Physics",
       "studyType": "",
       "startDate": "",
-      "endDate": "2026 (Expected)",
+      "endDate": "2026",
       "gpa": null,
       "courses": []
     },
